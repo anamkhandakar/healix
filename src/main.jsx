@@ -333,8 +333,8 @@ function App() {
    * is being deployed only as a demonstration on Vercel.
    */
   const DEMO_USER = {
-    email: "test@healix.com",
-    password: "12345678",
+    email: "khandakaranam@gmail.com",
+    password: "anam@2024",
     name: "Test Doctor"
   };
 
