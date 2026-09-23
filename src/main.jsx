@@ -161,7 +161,8 @@ function App() {
   const [authData, setAuthData] = useState({
     name: "",
     email: "",
-    password: ""
+    password: "",
+    confirmPassword: ""
   });
   const [authError, setAuthError] = useState("");
 
@@ -317,6 +318,27 @@ function App() {
     );
   };
 
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const validatePassword = (password) => {
+    if (password.length < 8) return "Password must be at least 8 characters.";
+    if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+    if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
+    if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+    return null;
+  };
+
+  const validateName = (name) => {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) return "Name must be at least 2 characters.";
+    if (trimmed.length > 50) return "Name must be less than 50 characters.";
+    if (!/^[a-zA-Z\s\.\-']+$/.test(trimmed)) return "Name contains invalid characters.";
+    return null;
+  };
+
   const getUsers = () => {
     try {
       return JSON.parse(
@@ -384,21 +406,30 @@ function App() {
     const name = authData.name.trim();
     const email = authData.email.trim().toLowerCase();
     const password = authData.password;
+    const confirmPassword = authData.confirmPassword;
 
-    if (
-      !email ||
-      !password ||
-      (authMode === "signup" && !name)
-    ) {
-      return setAuthError(
-        "Please fill in all required fields."
-      );
+    if (!email || !password || (authMode === "signup" && !name)) {
+      return setAuthError("Please fill in all required fields.");
     }
 
-    if (password.length < 6) {
-      return setAuthError(
-        "Password must be at least 6 characters."
-      );
+    if (!validateEmail(email)) {
+      return setAuthError("Please enter a valid email address.");
+    }
+
+    if (authMode === "signup") {
+      const nameError = validateName(name);
+      if (nameError) return setAuthError(nameError);
+
+      const passwordError = validatePassword(password);
+      if (passwordError) return setAuthError(passwordError);
+
+      if (password !== confirmPassword) {
+        return setAuthError("Passwords do not match.");
+      }
+    } else {
+      if (password.length < 6) {
+        return setAuthError("Password must be at least 6 characters.");
+      }
     }
 
     /*
@@ -408,29 +439,16 @@ function App() {
      */
     if (authMode === "login" && email === DEMO_USER.email) {
       if (password !== DEMO_USER.password) {
-        return setAuthError(
-          "Incorrect password. Please try again."
-        );
+        return setAuthError("Incorrect password. Please try again.");
       }
 
-      localStorage.setItem(
-        "healix_user_name",
-        DEMO_USER.name
-      );
-
-      localStorage.setItem(
-        "healix_current_user",
-        DEMO_USER.email
-      );
-
-      localStorage.setItem(
-        "healix_auth",
-        "true"
-      );
+      localStorage.setItem("healix_user_name", DEMO_USER.name);
+      localStorage.setItem("healix_current_user", DEMO_USER.email);
+      localStorage.setItem("healix_auth", "true");
 
       setAuth(true);
       setActiveNav("Dashboard");
-
+      notify("Welcome back, " + DEMO_USER.name + "!");
       return;
     }
 
@@ -445,75 +463,47 @@ function App() {
     if (!users) {
       users = localUsers;
     } else if (Object.keys(localUsers).length) {
-      users = {
-        ...users,
-        ...localUsers
-      };
-
+      users = { ...users, ...localUsers };
       await syncUsers(users);
     }
 
     if (authMode === "signup") {
       if (users[email]) {
-        setAuthError(
-          "An account with this email already exists. Please log in."
-        );
-
+        setAuthError("An account with this email already exists. Please log in.");
         setAuthMode("login");
-
         return;
       }
 
-      users[email] = {
-        name,
-        password
-      };
+      users[email] = { name, password };
 
-      localStorage.setItem(
-        "healix_users",
-        JSON.stringify(users)
-      );
+      localStorage.setItem("healix_users", JSON.stringify(users));
 
-      await syncUsers(users);
+      try {
+        await syncUsers(users);
+      } catch (err) {
+        console.warn("Failed to sync user to server:", err);
+      }
 
-      localStorage.setItem(
-        "healix_user_name",
-        name
-      );
+      localStorage.setItem("healix_user_name", name);
+      notify("Account created successfully! Welcome, " + name + "!");
     } else {
       if (!users[email]) {
-        return setAuthError(
-          "No account found with this email. Please sign up first."
-        );
+        return setAuthError("No account found with this email. Please sign up first.");
       }
 
       if (users[email].password !== password) {
-        return setAuthError(
-          "Incorrect password. Please try again."
-        );
+        return setAuthError("Incorrect password. Please try again.");
       }
 
-      localStorage.setItem(
-        "healix_users",
-        JSON.stringify(users)
-      );
-
-      localStorage.setItem(
-        "healix_user_name",
-        users[email].name
-      );
+      localStorage.setItem("healix_users", JSON.stringify(users));
+      localStorage.setItem("healix_user_name", users[email].name);
+      notify("Welcome back, " + users[email].name + "!");
     }
 
-    localStorage.setItem(
-      "healix_current_user",
-      email
-    );
+    localStorage.setItem("healix_current_user", email);
+    localStorage.setItem("healix_auth", "true");
 
-    localStorage.setItem(
-      "healix_auth",
-      "true"
-    );
-
+    setAuthData({ name: "", email: "", password: "", confirmPassword: "" });
     setAuth(true);
     setActiveNav("Dashboard");
   };
@@ -1197,6 +1187,39 @@ function AuthScreen({
               </button>
             </div>
           </label>
+
+          {!isLogin && (
+            <label>
+              Confirm Password
+
+              <div className="auth-input-wrap">
+                <span
+                  className="field-icon lock-icon"
+                  aria-hidden="true"
+                >
+                  ▣
+                </span>
+
+                <input
+                  autoComplete="new-password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={authData.confirmPassword}
+                  onChange={(e) =>
+                    setAuthData({
+                      ...authData,
+                      confirmPassword:
+                        e.target.value
+                    })
+                  }
+                  placeholder="Confirm your password"
+                />
+              </div>
+            </label>
+          )}
 
           {isLogin && (
             <div className="auth-options auth-options-right">
