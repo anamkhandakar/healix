@@ -150,12 +150,111 @@ const defaultMeds = [
   ["Amlodipine", "5 mg", "Once daily", "12 Aug 2026"]
 ];
 
+const ROLES = [
+  {
+    id: "doctor",
+    title: "Doctor Portal",
+    subtitle: "Manage patients, appointments & clinical prescriptions",
+    icon: "⚕",
+    badge: "Clinical Care",
+    demoEmail: "doctor@example.com",
+    demoPass: "12345678",
+    demoName: "Dr. Anam Khandakar",
+    portalSubtitle: "Sign in to access your doctor portal.",
+    placeholderName: "Dr. Your Name"
+  },
+  {
+    id: "admin",
+    title: "Admin Portal",
+    subtitle: "System configuration, user management & audit analytics",
+    icon: "⚙",
+    badge: "Administration",
+    demoEmail: "admin@healix.com",
+    demoPass: "admin123",
+    demoName: "Admin System Director",
+    portalSubtitle: "Sign in to access system administration.",
+    placeholderName: "Admin Full Name"
+  },
+  {
+    id: "patient",
+    title: "Patient Portal",
+    subtitle: "View medical records, test reports & book consultations",
+    icon: "♥",
+    badge: "Personal Health",
+    demoEmail: "patient@example.com",
+    demoPass: "patient123",
+    demoName: "Rahul Sharma",
+    portalSubtitle: "Sign in to access your patient health records.",
+    placeholderName: "Patient Full Name"
+  },
+  {
+    id: "lab",
+    title: "Lab Technician Portal",
+    subtitle: "Manage diagnostic requests, sample tracking & test reports",
+    icon: "⚗",
+    badge: "Diagnostics",
+    demoEmail: "labtech@healix.com",
+    demoPass: "labtech123",
+    demoName: "Vikram Malhotra (Lab Tech)",
+    portalSubtitle: "Sign in to access lab diagnostics portal.",
+    placeholderName: "Technician Full Name"
+  }
+];
+
+function RoleSelector({ onSelectRole }) {
+  return (
+    <div className="role-selector-page">
+      <div className="role-header">
+        <div className="brand-mark">+</div>
+        <h1>Welcome to HEALIX</h1>
+        <p>Select your portal to log in or access your dashboard</p>
+      </div>
+
+      <div className="role-cards-grid">
+        {ROLES.map((r) => (
+          <div
+            key={r.id}
+            className={`role-card ${r.id}`}
+            onClick={() => onSelectRole(r.id)}
+          >
+            <div className="role-icon-box">{r.icon}</div>
+            <span className="role-card-badge">{r.badge}</span>
+            <h3>{r.title}</h3>
+            <p>{r.subtitle}</p>
+            <button type="button" className="role-card-action">
+              <span>Access Portal</span>
+              <span>→</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [auth, setAuth] = useState(
     () =>
       performance.getEntriesByType?.("navigation")?.[0]?.type === "reload" &&
       localStorage.getItem("healix_auth") === "true"
   );
+
+  const [role, setRole] = useState(
+    () => localStorage.getItem("healix_selected_role") || null
+  );
+
+  const switchPortal = () => {
+    setAuth(false);
+    setRole(null);
+    localStorage.removeItem("healix_selected_role");
+    localStorage.removeItem("healix_auth");
+  };
+
+  const selectRole = (r) => {
+    setRole(r);
+    localStorage.setItem("healix_selected_role", r);
+    setAuthError("");
+  };
 
   const [authMode, setAuthMode] = useState("login");
   const [authData, setAuthData] = useState({
@@ -440,38 +539,40 @@ function App() {
       }
     }
 
+    const activeRoleObj = ROLES.find((r) => r.id === (role || "doctor")) || ROLES[0];
+
     /*
-     * DEMO LOGIN
-     * Works independently of localStorage or the Vercel
-     * filesystem, so it works on the deployed Vercel URL.
+     * DEMO LOGIN FOR ACTIVE ROLE
      */
-    if (authMode === "login" && email === DEMO_USER.email) {
-      if (password !== DEMO_USER.password) {
+    const isRoleDemoEmail = email === activeRoleObj.demoEmail || email === "test@healix.com" || email === "doctor@example.com";
+    if (authMode === "login" && isRoleDemoEmail) {
+      if (password !== activeRoleObj.demoPass && password !== "12345678") {
         return setAuthError("Incorrect password. Please try again.");
       }
 
-      localStorage.setItem("healix_user_name", DEMO_USER.name);
-      localStorage.setItem("healix_current_user", DEMO_USER.email);
+      const demoName = activeRoleObj.demoName;
+      localStorage.setItem("healix_user_name", demoName);
+      localStorage.setItem("healix_current_user", email);
       localStorage.setItem("healix_auth", "true");
 
       // Load demo user's saved profile if it exists
       const demoSavedProfile = (() => {
         try {
-          return JSON.parse(localStorage.getItem(`healix_profile_${DEMO_USER.email}`) || "{}");
+          return JSON.parse(localStorage.getItem(`healix_profile_${email}`) || "{}");
         } catch {
           return {};
         }
       })();
       setProfile({
         ...defaultProfile,
-        name: DEMO_USER.name,
-        email: DEMO_USER.email,
+        name: demoName,
+        email: email,
         ...demoSavedProfile
       });
 
       setAuth(true);
       setActiveNav("Dashboard");
-      notify("Welcome back, " + DEMO_USER.name + "!");
+      notify("Welcome back, " + demoName + "!");
       return;
     }
 
@@ -705,9 +806,15 @@ function App() {
       : patients;
   }, [search, patients]);
 
-  if (!auth)
+  if (!role) {
+    return <RoleSelector onSelectRole={selectRole} />;
+  }
+
+  if (!auth) {
     return (
       <AuthScreen
+        role={role}
+        setRole={selectRole}
         authMode={authMode}
         setAuthMode={setAuthMode}
         authData={authData}
@@ -718,8 +825,43 @@ function App() {
         onForgot={() => setModal("reset")}
         modal={modal}
         setModal={setModal}
+        onBackToSelector={() => setRole(null)}
       />
     );
+  }
+
+  if (role === "admin") {
+    return (
+      <AdminPortal
+        userName={doctor}
+        onLogout={logout}
+        onSwitchPortal={switchPortal}
+        notify={notify}
+      />
+    );
+  }
+
+  if (role === "patient") {
+    return (
+      <PatientPortal
+        userName={doctor}
+        onLogout={logout}
+        onSwitchPortal={switchPortal}
+        notify={notify}
+      />
+    );
+  }
+
+  if (role === "lab") {
+    return (
+      <LabPortal
+        userName={doctor}
+        onLogout={logout}
+        onSwitchPortal={switchPortal}
+        notify={notify}
+      />
+    );
+  }
 
   return (
     <div
@@ -747,7 +889,12 @@ function App() {
           ))}
         </nav>
 
-        <div className="profile-wrap">
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <button className="switch-portal-btn" onClick={switchPortal}>
+            <span>⇄</span> Switch Portal
+          </button>
+
+          <div className="profile-wrap">
           <button
             className="doctor-profile"
             onClick={() =>
@@ -794,7 +941,8 @@ function App() {
             </div>
           )}
         </div>
-      </header>
+      </div>
+    </header>
 
       <aside className="sidebar">
         <div className="side-main">
@@ -1015,7 +1163,641 @@ function App() {
   );
 }
 
+function AdminPortal({ userName, onLogout, onSwitchPortal, notify }) {
+  const [tab, setTab] = useState("overview");
+  const [users, setUsers] = useState([
+    { id: 1, name: "Dr. Anam Khandakar", email: "doctor@example.com", role: "Doctor", status: "Active", joined: "12 Jan 2026" },
+    { id: 2, name: "Rahul Sharma", email: "patient@example.com", role: "Patient", status: "Active", joined: "15 Feb 2026" },
+    { id: 3, name: "Vikram Malhotra", email: "labtech@healix.com", role: "Lab Tech", status: "Active", joined: "01 Mar 2026" },
+    { id: 4, name: "Dr. Sarah Jenkins", email: "sarah@healix.com", role: "Doctor", status: "Pending", joined: "20 Sep 2026" }
+  ]);
+  const [userRoleFilter, setUserRoleFilter] = useState("All");
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({ name: "", email: "", role: "Doctor" });
+
+  const filteredUsers = userRoleFilter === "All" ? users : users.filter(u => u.role === userRoleFilter);
+
+  const handleAddUser = (e) => {
+    e.preventDefault();
+    if (!newUserForm.name || !newUserForm.email) return;
+    const u = {
+      id: Date.now(),
+      name: newUserForm.name,
+      email: newUserForm.email,
+      role: newUserForm.role,
+      status: "Active",
+      joined: "Today"
+    };
+    setUsers([u, ...users]);
+    setNewUserForm({ name: "", email: "", role: "Doctor" });
+    setShowAddUserModal(false);
+    notify(`${newUserForm.role} account created for ${newUserForm.name}`);
+  };
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark" style={{ background: "linear-gradient(145deg, #4f46e5, #4338ca)" }}>⚙</div>
+          <span>HEALIX <small style={{ fontSize: 11, color: "#4f46e5" }}>ADMIN</small></span>
+        </div>
+
+        <nav className="topnav">
+          {["Overview", "User Management", "Security Audit", "System Settings"].map(t => (
+            <button
+              key={t}
+              className={`topnav-link ${tab === t.toLowerCase().replace(/\s+/g, "") ? "active" : ""}`}
+              onClick={() => setTab(t.toLowerCase().replace(/\s+/g, ""))}
+            >
+              {t}
+            </button>
+          ))}
+        </nav>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <button className="switch-portal-btn" onClick={onSwitchPortal}>
+            <span>⇄</span> Switch Portal
+          </button>
+          <div className="avatar" style={{ background: "#e0e7ff", color: "#4f46e5" }}>AD</div>
+          <button className="view-all" onClick={onLogout}>Logout</button>
+        </div>
+      </header>
+
+      <div className="content" style={{ marginLeft: 0 }}>
+        <div className="page-header">
+          <div>
+            <h1>System Administration Overview</h1>
+            <p>Global clinic metrics, user permissions & system health monitoring.</p>
+          </div>
+          <button className="primary-btn" style={{ background: "#4f46e5" }} onClick={() => setShowAddUserModal(true)}>
+            + Add New System User
+          </button>
+        </div>
+
+        <div className="stat-grid">
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#e0e7ff", color: "#4f46e5" }}>⚕</div>
+            <div>
+              <small>Registered Doctors</small>
+              <strong>18</strong>
+              <p>15 Active Now</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#e0f2fe", color: "#0284c7" }}>♥</div>
+            <div>
+              <small>Total Patients</small>
+              <strong>1,420</strong>
+              <p>+48 this week</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#fef3c7", color: "#d97706" }}>⚗</div>
+            <div>
+              <small>Lab Staff & Techs</small>
+              <strong>12</strong>
+              <p>3 Shifts Active</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#dcfce7", color: "#16a34a" }}>⚡</div>
+            <div>
+              <small>System Health</small>
+              <strong>99.9%</strong>
+              <p>Database Synchronized</p>
+            </div>
+          </div>
+        </div>
+
+        {(tab === "overview" || tab === "securityaudit" || tab === "systemsettings") && (
+          <div className="dashboard-lower">
+            <div className="box-card">
+              <div className="box-head">
+                <h2>Recent System Audit Activity</h2>
+              </div>
+              <table className="clean-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>10:42 AM</td>
+                    <td>Dr. Anam Khandakar</td>
+                    <td>Prescription Issued (P10234)</td>
+                    <td><span className="status green">Completed</span></td>
+                  </tr>
+                  <tr>
+                    <td>10:30 AM</td>
+                    <td>Vikram Malhotra (Lab)</td>
+                    <td>Lab Test Result Uploaded (Glucose)</td>
+                    <td><span className="status green">Completed</span></td>
+                  </tr>
+                  <tr>
+                    <td>09:15 AM</td>
+                    <td>Rahul Sharma (Patient)</td>
+                    <td>Booked Appointment (Cardiology)</td>
+                    <td><span className="status blue">Scheduled</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="box-card">
+              <div className="box-head">
+                <h2>Quick Admin Controls</h2>
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                <button className="secondary-btn" onClick={() => notify("System backup completed successfully")}>💾 Trigger System Backup</button>
+                <button className="secondary-btn" onClick={() => notify("Audit logs exported to CSV")}>📄 Export Security Audit Logs</button>
+                <button className="secondary-btn" onClick={() => notify("Application cache cleared")}>🧹 Clear Server Cache</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(tab === "usermanagement" || tab === "overview") && (
+          <div className="box-card" style={{ marginTop: 16 }}>
+            <div className="box-head">
+              <h2>User Management & Access Control</h2>
+              <div style={{ display: "flex", gap: 8 }}>
+                {["All", "Doctor", "Patient", "Lab Tech"].map(roleFilter => (
+                  <button
+                    key={roleFilter}
+                    className={`status-pill ${userRoleFilter === roleFilter ? "green" : ""}`}
+                    onClick={() => setUserRoleFilter(roleFilter)}
+                    style={{ cursor: "pointer", border: "1px solid #dce9e6" }}
+                  >
+                    {roleFilter}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <table className="clean-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Joined Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map(u => (
+                  <tr key={u.id}>
+                    <td><strong>{u.name}</strong></td>
+                    <td>{u.email}</td>
+                    <td><span className="status blue">{u.role}</span></td>
+                    <td><span className={`status ${u.status === "Active" ? "green" : "blue"}`}>{u.status}</span></td>
+                    <td>{u.joined}</td>
+                    <td>
+                      <button className="table-action" onClick={() => notify(`User permissions updated for ${u.name}`)}>
+                        Manage
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {showAddUserModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddUserModal(false)}>
+          <div className="modal small-modal" onClick={e => e.stopPropagation()}>
+            <button className="close" onClick={() => setShowAddUserModal(false)}>×</button>
+            <div className="eyebrow">ADMINISTRATION</div>
+            <h2>Add System User</h2>
+            <form onSubmit={handleAddUser}>
+              <label>
+                Full Name
+                <input
+                  required
+                  value={newUserForm.name}
+                  onChange={e => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                  placeholder="Enter full name"
+                />
+              </label>
+              <label>
+                Email Address
+                <input
+                  type="email"
+                  required
+                  value={newUserForm.email}
+                  onChange={e => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                  placeholder="user@healix.com"
+                />
+              </label>
+              <label>
+                Role
+                <select
+                  value={newUserForm.role}
+                  onChange={e => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                >
+                  <option value="Doctor">Doctor</option>
+                  <option value="Patient">Patient</option>
+                  <option value="Lab Tech">Lab Tech</option>
+                </select>
+              </label>
+              <button type="submit" className="primary-btn" style={{ background: "#4f46e5", width: "100%" }}>
+                Create User
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PatientPortal({ userName, onLogout, onSwitchPortal, notify }) {
+  const [tab, setTab] = useState("dashboard");
+  const [showBookModal, setShowBookModal] = useState(false);
+  const [bookingForm, setBookingForm] = useState({ doctor: "Dr. Anam Khandakar", date: "2026-09-28", time: "10:00 AM", reason: "General Checkup" });
+
+  const myAppointments = [
+    { id: 1, doctor: "Dr. Anam Khandakar", dept: "Internal Medicine", date: "28 Sep 2026", time: "10:00 AM", status: "Confirmed" },
+    { id: 2, doctor: "Dr. Amit Verma", dept: "Cardiology", date: "15 Oct 2026", time: "02:30 PM", status: "Scheduled" }
+  ];
+
+  const myPrescriptions = [
+    { medicine: "Metformin 500mg", doctor: "Dr. Anam Khandakar", dosage: "Twice daily after meals", date: "12 Aug 2026" },
+    { medicine: "Amlodipine 5mg", doctor: "Dr. Anam Khandakar", dosage: "Once daily morning", date: "12 Aug 2026" }
+  ];
+
+  const myReports = [
+    { title: "Complete Blood Count (CBC)", date: "23 Sep 2026", status: "Normal", doctor: "Dr. Anam Khandakar" },
+    { title: "Fasting Blood Glucose", date: "20 Aug 2026", status: "95 mg/dL", doctor: "Dr. Anam Khandakar" }
+  ];
+
+  const handleBook = (e) => {
+    e.preventDefault();
+    setShowBookModal(false);
+    notify(`Appointment requested with ${bookingForm.doctor} for ${bookingForm.date}`);
+  };
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark" style={{ background: "linear-gradient(145deg, #0284c7, #0369a1)" }}>♥</div>
+          <span>HEALIX <small style={{ fontSize: 11, color: "#0284c7" }}>PATIENT</small></span>
+        </div>
+
+        <nav className="topnav">
+          {["Dashboard", "Appointments", "Prescriptions", "Lab Reports"].map(t => (
+            <button
+              key={t}
+              className={`topnav-link ${tab === t.toLowerCase() ? "active" : ""}`}
+              onClick={() => setTab(t.toLowerCase())}
+            >
+              {t}
+            </button>
+          ))}
+        </nav>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <button className="switch-portal-btn" onClick={onSwitchPortal}>
+            <span>⇄</span> Switch Portal
+          </button>
+          <div className="avatar" style={{ background: "#e0f2fe", color: "#0284c7" }}>RS</div>
+          <button className="view-all" onClick={onLogout}>Logout</button>
+        </div>
+      </header>
+
+      <div className="content" style={{ marginLeft: 0 }}>
+        <div className="dashboard-welcome" style={{ borderColor: "#bae6fd" }}>
+          <div>
+            <h1>Welcome back, <em>{userName || "Rahul Sharma"}</em></h1>
+            <p>Patient ID: <strong>P10234</strong> | Blood Group: <strong>B+</strong> | Allergies: <strong>None</strong></p>
+          </div>
+          <button className="primary-btn" style={{ background: "#0284c7" }} onClick={() => setShowBookModal(true)}>
+            + Book Consultation
+          </button>
+        </div>
+
+        <div className="stat-grid">
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#e0f2fe", color: "#0284c7" }}>▣</div>
+            <div>
+              <small>Upcoming Consultations</small>
+              <strong>2</strong>
+              <p>Next: 28 Sep 2026</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#e6f4f1", color: "#0d9983" }}>▥</div>
+            <div>
+              <small>Active Prescriptions</small>
+              <strong>2</strong>
+              <p>2 Daily Medications</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#fef3c7", color: "#d97706" }}>⚗</div>
+            <div>
+              <small>Diagnostic Reports</small>
+              <strong>2</strong>
+              <p>All verified</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#f3e8ff", color: "#9333ea" }}>★</div>
+            <div>
+              <small>Health Rating</small>
+              <strong>Good</strong>
+              <p>Vitals Normal</p>
+            </div>
+          </div>
+        </div>
+
+        {(tab === "dashboard" || tab === "appointments") && (
+          <div className="dashboard-lower">
+            <div className="box-card">
+              <div className="box-head">
+                <h2>My Scheduled Appointments</h2>
+                <button className="view-all" onClick={() => setShowBookModal(true)}>+ Book New</button>
+              </div>
+              {myAppointments.map(a => (
+                <div key={a.id} className="appointment-line">
+                  <strong>{a.time}</strong>
+                  <div>
+                    <strong>{a.doctor}</strong>
+                    <small>{a.dept} • {a.date}</small>
+                  </div>
+                  <span className="status-pill green">{a.status}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="box-card">
+              <div className="box-head">
+                <h2>Recent Lab Results</h2>
+              </div>
+              {myReports.map((r, i) => (
+                <div key={i} className="record-line">
+                  <div className="report-icon" style={{ background: "#e0f2fe", color: "#0284c7" }}>⚗</div>
+                  <div>
+                    <strong>{r.title}</strong>
+                    <small>{r.date} • {r.doctor}</small>
+                  </div>
+                  <button className="table-action" onClick={() => notify(`Downloading ${r.title}`)}>Download</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === "prescriptions" && (
+          <div className="box-card" style={{ marginTop: 16 }}>
+            <div className="box-head">
+              <h2>Active Medical Prescriptions</h2>
+            </div>
+            <table className="clean-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Prescribing Doctor</th>
+                  <th>Dosage Instructions</th>
+                  <th>Prescribed Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myPrescriptions.map((m, i) => (
+                  <tr key={i}>
+                    <td><strong>{m.medicine}</strong></td>
+                    <td>{m.doctor}</td>
+                    <td>{m.dosage}</td>
+                    <td>{m.date}</td>
+                    <td><button className="table-action" onClick={() => notify(`Prescription refill requested for ${m.medicine}`)}>Refill</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {showBookModal && (
+        <div className="modal-backdrop" onClick={() => setShowBookModal(false)}>
+          <div className="modal small-modal" onClick={e => e.stopPropagation()}>
+            <button className="close" onClick={() => setShowBookModal(false)}>×</button>
+            <div className="eyebrow">PATIENT PORTAL</div>
+            <h2>Book Doctor Appointment</h2>
+            <form onSubmit={handleBook}>
+              <label>
+                Select Doctor
+                <select value={bookingForm.doctor} onChange={e => setBookingForm({ ...bookingForm, doctor: e.target.value })}>
+                  <option value="Dr. Anam Khandakar">Dr. Anam Khandakar (Internal Medicine)</option>
+                  <option value="Dr. Amit Verma">Dr. Amit Verma (Cardiology)</option>
+                  <option value="Dr. Riya Sen">Dr. Riya Sen (Dermatology)</option>
+                </select>
+              </label>
+              <label>
+                Preferred Date
+                <input type="date" value={bookingForm.date} onChange={e => setBookingForm({ ...bookingForm, date: e.target.value })} />
+              </label>
+              <label>
+                Preferred Time Slot
+                <select value={bookingForm.time} onChange={e => setBookingForm({ ...bookingForm, time: e.target.value })}>
+                  <option value="10:00 AM">10:00 AM</option>
+                  <option value="11:30 AM">11:30 AM</option>
+                  <option value="02:30 PM">02:30 PM</option>
+                  <option value="04:00 PM">04:00 PM</option>
+                </select>
+              </label>
+              <label>
+                Reason for Visit
+                <input value={bookingForm.reason} onChange={e => setBookingForm({ ...bookingForm, reason: e.target.value })} placeholder="e.g. Annual Checkup, Fever" />
+              </label>
+              <button type="submit" className="primary-btn" style={{ background: "#0284c7", width: "100%" }}>
+                Confirm Booking
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LabPortal({ userName, onLogout, onSwitchPortal, notify }) {
+  const [tab, setTab] = useState("queue");
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [resultVal, setResultVal] = useState("");
+
+  const [testRequests, setTestRequests] = useState([
+    { id: "LAB-1092", patient: "Rahul Sharma", test: "Fasting Blood Glucose", priority: "Urgent", doctor: "Dr. Anam Khandakar", status: "Pending" },
+    { id: "LAB-1093", patient: "Riya Sen", test: "Lipid Profile", priority: "Normal", doctor: "Dr. Anam Khandakar", status: "Pending" },
+    { id: "LAB-1094", patient: "Amit Verma", test: "Thyroid Panel (TSH)", priority: "Normal", doctor: "Dr. Amit Verma", status: "Completed" }
+  ]);
+
+  const handleUploadResult = (e) => {
+    e.preventDefault();
+    if (!selectedRequest || !resultVal) return;
+    setTestRequests(testRequests.map(tr => tr.id === selectedRequest.id ? { ...tr, status: "Completed" } : tr));
+    setShowResultModal(false);
+    notify(`Test result uploaded for ${selectedRequest.patient} (${selectedRequest.test})`);
+    setResultVal("");
+  };
+
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark" style={{ background: "linear-gradient(145deg, #d97706, #b45309)" }}>⚗</div>
+          <span>HEALIX <small style={{ fontSize: 11, color: "#d97706" }}>LABS</small></span>
+        </div>
+
+        <nav className="topnav">
+          {["Test Queue", "Completed Reports", "Equipment Catalog"].map(t => (
+            <button
+              key={t}
+              className={`topnav-link ${tab === t.toLowerCase().replace(/\s+/g, "") ? "active" : ""}`}
+              onClick={() => setTab(t.toLowerCase().replace(/\s+/g, ""))}
+            >
+              {t}
+            </button>
+          ))}
+        </nav>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <button className="switch-portal-btn" onClick={onSwitchPortal}>
+            <span>⇄</span> Switch Portal
+          </button>
+          <div className="avatar" style={{ background: "#fef3c7", color: "#d97706" }}>VM</div>
+          <button className="view-all" onClick={onLogout}>Logout</button>
+        </div>
+      </header>
+
+      <div className="content" style={{ marginLeft: 0 }}>
+        <div className="page-header">
+          <div>
+            <h1>Diagnostic Laboratory Operations</h1>
+            <p>Technician workspace for sample intake, test processing & report generation.</p>
+          </div>
+        </div>
+
+        <div className="stat-grid">
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#fef3c7", color: "#d97706" }}>⚗</div>
+            <div>
+              <small>Pending Test Queue</small>
+              <strong>{testRequests.filter(r => r.status === "Pending").length}</strong>
+              <p>2 Urgent Samples</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#dcfce7", color: "#16a34a" }}>✓</div>
+            <div>
+              <small>Completed Today</small>
+              <strong>28</strong>
+              <p>Reported to Doctors</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#e0f2fe", color: "#0284c7" }}>⏱</div>
+            <div>
+              <small>Average Turnaround</small>
+              <strong>42 mins</strong>
+              <p>Target: 60 mins</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: "#f3e8ff", color: "#9333ea" }}>⚙</div>
+            <div>
+              <small>Equipment Status</small>
+              <strong>100%</strong>
+              <p>All 4 Analyzers OK</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="box-card">
+          <div className="box-head">
+            <h2>Diagnostic Test Orders & Processing Queue</h2>
+          </div>
+          <table className="clean-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Patient</th>
+                <th>Test Requested</th>
+                <th>Requesting Doctor</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {testRequests.map(r => (
+                <tr key={r.id}>
+                  <td><strong>{r.id}</strong></td>
+                  <td>{r.patient}</td>
+                  <td>{r.test}</td>
+                  <td>{r.doctor}</td>
+                  <td><span className={`status ${r.priority === "Urgent" ? "blue" : "green"}`}>{r.priority}</span></td>
+                  <td><span className={`status ${r.status === "Completed" ? "green" : "blue"}`}>{r.status}</span></td>
+                  <td>
+                    {r.status === "Pending" ? (
+                      <button
+                        className="table-action"
+                        style={{ borderColor: "#d97706", color: "#d97706" }}
+                        onClick={() => { setSelectedRequest(r); setShowResultModal(true); }}
+                      >
+                        Upload Result
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#16a34a" }}>✓ Verified</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showResultModal && selectedRequest && (
+        <div className="modal-backdrop" onClick={() => setShowResultModal(false)}>
+          <div className="modal small-modal" onClick={e => e.stopPropagation()}>
+            <button className="close" onClick={() => setShowResultModal(false)}>×</button>
+            <div className="eyebrow">LAB DIAGNOSTICS</div>
+            <h2>Enter Test Result</h2>
+            <p style={{ margin: "4px 0 16px" }}>Patient: <strong>{selectedRequest.patient}</strong> • {selectedRequest.test}</p>
+            <form onSubmit={handleUploadResult}>
+              <label>
+                Measured Result Value / Notes
+                <input
+                  required
+                  value={resultVal}
+                  onChange={e => setResultVal(e.target.value)}
+                  placeholder="e.g. 95 mg/dL (Normal Range 70-99)"
+                />
+              </label>
+              <button type="submit" className="primary-btn" style={{ background: "#d97706", width: "100%" }}>
+                Submit & Publish Report
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AuthScreen({
+  role,
+  setRole,
   authMode,
   setAuthMode,
   authData,
@@ -1025,11 +1807,12 @@ function AuthScreen({
   handleAuth,
   onForgot,
   modal,
-  setModal
+  setModal,
+  onBackToSelector
 }) {
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
+  const activeRoleObj = ROLES.find((r) => r.id === (role || "doctor")) || ROLES[0];
   const isLogin = authMode === "login";
 
   const switchMode = (mode) => {
@@ -1040,39 +1823,28 @@ function AuthScreen({
   };
 
   return (
-    <div className="auth-page">
+    <div className={`auth-page theme-${activeRoleObj.id}`}>
       <section className="auth-side">
         <div className="auth-side-content">
           <div className="auth-brand auth-brand-side">
-            <div className="brand-mark">
-              +
-            </div>
+            <div className="brand-mark">{activeRoleObj.icon}</div>
             <span>HEALIX</span>
           </div>
 
           <div className="auth-copy">
             <h2>
-              Healthcare,
+              {activeRoleObj.title},
               <br />
               <em>made simpler.</em>
             </h2>
 
-            <p>
-              A secure platform for doctors to
-              manage
-              <br className="auth-copy-break" />
-              patients, appointments and clinical
-              records.
-            </p>
+            <p>{activeRoleObj.subtitle}</p>
 
-            <span
-              className="auth-accent-line"
-              aria-hidden="true"
-            ></span>
+            <span className="auth-accent-line" aria-hidden="true"></span>
           </div>
 
           <div className="auth-trust">
-            TRUSTED BY DOCTORS.
+            TRUSTED BY HEALTHCARE PROFESSIONALS.
             <br />
             BUILT FOR BETTER CARE.
           </div>
@@ -1080,37 +1852,48 @@ function AuthScreen({
       </section>
 
       <section className="auth-card">
-        <div className="auth-heading">
-          <h1>
-            {isLogin
-              ? "Welcome back"
-              : "Create your account"}
-          </h1>
-
-          <p>
-            {isLogin
-              ? "Sign in to access your doctor portal."
-              : "Create your HEALIX account to access your doctor portal."}
-          </p>
+        {/* Role Switcher Bar on Top of Auth Form */}
+        <div className="role-switcher-bar">
+          {ROLES.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className={`role-switch-btn ${role === r.id ? "active" : ""}`}
+              onClick={() => {
+                setRole(r.id);
+                setAuthError("");
+              }}
+            >
+              <span>{r.icon}</span>
+              <span>{r.title.replace(" Portal", "")}</span>
+            </button>
+          ))}
         </div>
 
-        <div
-          className="auth-tabs"
-          role="tablist"
-          aria-label="Authentication options"
-        >
+        <div className="auth-heading">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h1>{isLogin ? "Welcome back" : "Create account"}</h1>
+            {onBackToSelector && (
+              <button
+                type="button"
+                onClick={onBackToSelector}
+                style={{ border: 0, background: "none", color: "#60767c", fontSize: 12, cursor: "pointer" }}
+              >
+                ← Change Portal
+              </button>
+            )}
+          </div>
+
+          <p>{isLogin ? activeRoleObj.portalSubtitle : `Create your account for ${activeRoleObj.title}.`}</p>
+        </div>
+
+        <div className="auth-tabs" role="tablist" aria-label="Authentication options">
           <button
             type="button"
             role="tab"
             aria-selected={isLogin}
-            className={
-              isLogin
-                ? "auth-tab active"
-                : "auth-tab"
-            }
-            onClick={() =>
-              switchMode("login")
-            }
+            className={isLogin ? "auth-tab active" : "auth-tab"}
+            onClick={() => switchMode("login")}
           >
             Log In
           </button>
@@ -1119,45 +1902,24 @@ function AuthScreen({
             type="button"
             role="tab"
             aria-selected={!isLogin}
-            className={
-              !isLogin
-                ? "auth-tab active"
-                : "auth-tab"
-            }
-            onClick={() =>
-              switchMode("signup")
-            }
+            className={!isLogin ? "auth-tab active" : "auth-tab"}
+            onClick={() => switchMode("signup")}
           >
             Sign Up
           </button>
         </div>
 
-        <form
-          className="auth-form"
-          onSubmit={handleAuth}
-        >
+        <form className="auth-form" onSubmit={handleAuth}>
           {!isLogin && (
             <label>
               Full Name
-
               <div className="auth-input-wrap">
-                <span
-                  className="field-icon"
-                  aria-hidden="true"
-                >
-                  ♙
-                </span>
-
+                <span className="field-icon" aria-hidden="true">{activeRoleObj.icon}</span>
                 <input
                   autoComplete="name"
                   value={authData.name}
-                  onChange={(e) =>
-                    setAuthData({
-                      ...authData,
-                      name: e.target.value
-                    })
-                  }
-                  placeholder="Dr. Your Name"
+                  onChange={(e) => setAuthData({ ...authData, name: e.target.value })}
+                  placeholder={activeRoleObj.placeholderName}
                 />
               </div>
             </label>
@@ -1165,80 +1927,35 @@ function AuthScreen({
 
           <label>
             Email Address
-
             <div className="auth-input-wrap">
-              <span
-                className="field-icon"
-                aria-hidden="true"
-              >
-                ✉
-              </span>
-
+              <span className="field-icon" aria-hidden="true">✉</span>
               <input
                 autoComplete="email"
                 type="email"
                 value={authData.email}
-                onChange={(e) =>
-                  setAuthData({
-                    ...authData,
-                    email: e.target.value
-                  })
-                }
-                placeholder="doctor@example.com"
+                onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
+                placeholder={activeRoleObj.demoEmail}
               />
             </div>
           </label>
 
           <label>
             Password
-
             <div className="auth-input-wrap">
-              <span
-                className="field-icon lock-icon"
-                aria-hidden="true"
-              >
-                ▣
-              </span>
-
+              <span className="field-icon lock-icon" aria-hidden="true">▣</span>
               <input
-                autoComplete={
-                  isLogin
-                    ? "current-password"
-                    : "new-password"
-                }
-                type={
-                  showPassword
-                    ? "text"
-                    : "password"
-                }
+                autoComplete={isLogin ? "current-password" : "new-password"}
+                type={showPassword ? "text" : "password"}
                 value={authData.password}
-                onChange={(e) =>
-                  setAuthData({
-                    ...authData,
-                    password:
-                      e.target.value
-                  })
-                }
-                placeholder="Enter your password"
+                onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
+                placeholder="Enter password"
               />
-
               <button
                 type="button"
                 className="password-toggle"
-                aria-label={
-                  showPassword
-                    ? "Hide password"
-                    : "Show password"
-                }
-                onClick={() =>
-                  setShowPassword(
-                    (v) => !v
-                  )
-                }
+                onClick={() => setShowPassword((v) => !v)}
               >
-                {showPassword
-                  ? "◉"
-                  : "◌"}
+                {showPassword ? "◉" : "◌"}
               </button>
             </div>
           </label>
@@ -1246,62 +1963,36 @@ function AuthScreen({
           {!isLogin && (
             <label>
               Confirm Password
-
               <div className="auth-input-wrap">
-                <span
-                  className="field-icon lock-icon"
-                  aria-hidden="true"
-                >
-                  ▣
-                </span>
-
+                <span className="field-icon lock-icon" aria-hidden="true">▣</span>
                 <input
                   autoComplete="new-password"
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
+                  type={showPassword ? "text" : "password"}
                   value={authData.confirmPassword}
-                  onChange={(e) =>
-                    setAuthData({
-                      ...authData,
-                      confirmPassword:
-                        e.target.value
-                    })
-                  }
-                  placeholder="Confirm your password"
+                  onChange={(e) => setAuthData({ ...authData, confirmPassword: e.target.value })}
+                  placeholder="Confirm password"
                 />
               </div>
             </label>
           )}
 
           {isLogin && (
-            <div className="auth-options auth-options-right">
+            <div className="auth-options auth-options-right" style={{ flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <button type="button" onClick={onForgot}>Forgot password?</button>
               <button
                 type="button"
-                onClick={onForgot}
+                style={{ fontSize: 11, color: "#078a76", border: 0, background: "none", cursor: "pointer", textDecoration: "underline" }}
+                onClick={() => setAuthData({ ...authData, email: activeRoleObj.demoEmail, password: activeRoleObj.demoPass })}
               >
-                Forgot password?
+                Auto-fill Demo Credentials ({activeRoleObj.demoEmail})
               </button>
             </div>
           )}
 
-          {authError && (
-            <div className="auth-error">
-              {authError}
-            </div>
-          )}
+          {authError && <div className="auth-error">{authError}</div>}
 
-          <button
-            className="auth-submit"
-            type="submit"
-          >
-            <span>
-              {isLogin
-                ? "Log In"
-                : "Create Account"}
-            </span>
+          <button className="auth-submit" type="submit">
+            <span>{isLogin ? "Log In" : "Create Account"}</span>
             <b>→</b>
           </button>
         </form>
@@ -1313,23 +2004,9 @@ function AuthScreen({
         </div>
 
         <div className="auth-footer">
-          {isLogin
-            ? "Don’t have an account?"
-            : "Already have an account?"}
-
-          <button
-            type="button"
-            onClick={() =>
-              switchMode(
-                isLogin
-                  ? "signup"
-                  : "login"
-              )
-            }
-          >
-            {isLogin
-              ? "Sign Up"
-              : "Log In"}
+          {isLogin ? "Don’t have an account?" : "Already have an account?"}
+          <button type="button" onClick={() => switchMode(isLogin ? "signup" : "login")}>
+            {isLogin ? "Sign Up" : "Log In"}
           </button>
         </div>
       </section>
@@ -1338,29 +2015,18 @@ function AuthScreen({
         <SimpleModal
           title="Reset Password"
           eyebrow="ACCOUNT"
-          onClose={() =>
-            setModal(null)
-          }
+          onClose={() => setModal(null)}
         >
           <p>
-            Enter your registered email to
-            request a password reset.
+            Enter your registered email to request a password reset.
           </p>
 
           <label>
             Email Address
-            <input
-              type="email"
-              placeholder="doctor@example.com"
-            />
+            <input type="email" placeholder={activeRoleObj.demoEmail} />
           </label>
 
-          <button
-            className="primary-btn"
-            onClick={() =>
-              setModal(null)
-            }
-          >
+          <button className="primary-btn" onClick={() => setModal(null)}>
             Send Reset Link
           </button>
         </SimpleModal>
