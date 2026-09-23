@@ -251,9 +251,13 @@ function App() {
 
   const [profile, setProfile] = useState(() => {
     try {
+      const currentUser = localStorage.getItem("healix_current_user");
+      const profileKey = currentUser
+        ? `healix_profile_${currentUser}`
+        : "healix_profile";
       return {
         ...defaultProfile,
-        ...JSON.parse(localStorage.getItem("healix_profile") || "{}")
+        ...JSON.parse(localStorage.getItem(profileKey) || "{}")
       };
     } catch {
       return defaultProfile;
@@ -285,7 +289,11 @@ function App() {
   }, [appointments]);
 
   useEffect(() => {
-    localStorage.setItem("healix_profile", JSON.stringify(profile));
+    const currentUser = localStorage.getItem("healix_current_user");
+    const profileKey = currentUser
+      ? `healix_profile_${currentUser}`
+      : "healix_profile";
+    localStorage.setItem(profileKey, JSON.stringify(profile));
   }, [profile]);
 
   useEffect(() => {
@@ -446,6 +454,21 @@ function App() {
       localStorage.setItem("healix_current_user", DEMO_USER.email);
       localStorage.setItem("healix_auth", "true");
 
+      // Load demo user's saved profile if it exists
+      const demoSavedProfile = (() => {
+        try {
+          return JSON.parse(localStorage.getItem(`healix_profile_${DEMO_USER.email}`) || "{}");
+        } catch {
+          return {};
+        }
+      })();
+      setProfile({
+        ...defaultProfile,
+        name: DEMO_USER.name,
+        email: DEMO_USER.email,
+        ...demoSavedProfile
+      });
+
       setAuth(true);
       setActiveNav("Dashboard");
       notify("Welcome back, " + DEMO_USER.name + "!");
@@ -485,6 +508,17 @@ function App() {
       }
 
       localStorage.setItem("healix_user_name", name);
+      localStorage.setItem("healix_current_user", email);
+
+      // Build a fresh profile for this new user with their name & email
+      const newUserProfile = {
+        ...defaultProfile,
+        name: name,
+        email: email
+      };
+      localStorage.setItem(`healix_profile_${email}`, JSON.stringify(newUserProfile));
+      setProfile(newUserProfile);
+
       notify("Account created successfully! Welcome, " + name + "!");
     } else {
       if (!users[email]) {
@@ -497,6 +531,23 @@ function App() {
 
       localStorage.setItem("healix_users", JSON.stringify(users));
       localStorage.setItem("healix_user_name", users[email].name);
+      localStorage.setItem("healix_current_user", email);
+
+      // Load this user's saved profile, falling back to their name from the account
+      const savedProfile = (() => {
+        try {
+          return JSON.parse(localStorage.getItem(`healix_profile_${email}`) || "{}");
+        } catch {
+          return {};
+        }
+      })();
+      setProfile({
+        ...defaultProfile,
+        name: users[email].name,
+        email: email,
+        ...savedProfile
+      });
+
       notify("Welcome back, " + users[email].name + "!");
     }
 
@@ -511,6 +562,7 @@ function App() {
   const logout = () => {
     localStorage.removeItem("healix_auth");
     localStorage.removeItem("healix_current_user");
+    setProfile(defaultProfile);
     setAuth(false);
     setProfileOpen(false);
     setAuthMode("login");
