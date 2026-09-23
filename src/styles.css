@@ -265,6 +265,11 @@ button{cursor:pointer}
   font-size:15px;
   font-weight:600;
   transition:.18s ease;
+  cursor:pointer;
+}
+.auth-tab:hover:not(.active){
+  background:rgba(255,255,255,.55);
+  color:#2e5a60;
 }
 .auth-tab.active{
   color:#078a76;
@@ -437,3 +442,206 @@ button{cursor:pointer}
 /* Enhanced profile and settings */
 .modal.settings-modal{width:min(820px,100%);max-height:88vh;overflow:auto;padding:30px}.settings-layout{display:grid;grid-template-columns:190px 1fr;gap:24px;margin-top:18px}.settings-tabs{border-right:1px solid #e3ecea;padding-right:14px}.settings-tabs button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#557078;padding:11px 12px;border-radius:9px;font-size:12px;margin-bottom:4px;cursor:pointer}.settings-tabs button:hover,.settings-tabs button.active{background:#eef8f5;color:#0b8069;font-weight:700}.settings-panel{min-width:0}.settings-panel h3{margin:0 0 5px;font-size:18px;color:#173f4c}.settings-panel>p{margin:0 0 18px;color:#718489;font-size:11px;line-height:1.5}.settings-panel label{margin:10px 0}.settings-panel .primary-btn{margin-top:12px}.toggle-row{display:flex!important;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #edf2f1;font-size:12px!important;font-weight:500!important;color:#355762!important}.toggle-row input{width:18px!important;height:18px;margin:0!important;accent-color:#0d8872}.security-note{background:#f3f9f7;border:1px solid #dcebe7;border-radius:9px;padding:12px;color:#6d8084;font-size:11px;line-height:1.5;margin-top:14px}.secondary-btn{display:block;width:100%;text-align:left;border:1px solid #d9e7e4;background:#fff;border-radius:9px;padding:11px 12px;color:#355762;font-size:12px;margin:9px 0;cursor:pointer}.secondary-btn:hover{background:#f4faf8;color:#0b8069}.settings-save{width:auto}.profile-modal-avatar{display:flex;align-items:center;gap:12px;background:#f4faf8;border:1px solid #e0ece9;border-radius:12px;padding:12px;margin-bottom:16px}.profile-modal-avatar b,.profile-modal-avatar small{display:block}.profile-modal-avatar small{color:#718489;font-size:11px;margin-top:3px}.avatar.large{width:48px;height:48px;font-size:14px}.settings-summary{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:1px solid #e7efed}.settings-summary b,.settings-summary small{display:block}.settings-summary small{font-size:11px;color:#718489;margin-top:4px}.settings-overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.settings-overview-grid>div{border:1px solid #e2ecea;background:#f9fcfb;border-radius:10px;padding:14px}.settings-overview-grid small,.settings-overview-grid strong{display:block}.settings-overview-grid small{font-size:10px;color:#718489;margin-bottom:6px}.settings-overview-grid strong{font-size:12px;color:#244d58;line-height:1.4}.compact-view .box-card{padding-top:14px;padding-bottom:14px}.compact-view .record-line,.compact-view .appointment-line{padding-top:10px;padding-bottom:10px}
 @media(max-width:700px){.settings-layout{grid-template-columns:1fr}.settings-tabs{border-right:0;border-bottom:1px solid #e3ecea;padding:0 0 10px;display:flex;overflow:auto;gap:5px}.settings-tabs button{min-width:max-content;margin:0}.settings-overview-grid{grid-template-columns:1fr}.modal.settings-modal{padding:22px}}
+
+/* =========================================================
+   ROLE SELECTOR & MULTI-PORTAL STYLES
+   ========================================================= */
+.role-selector-page{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg, #f4fbf9 0%, #e8f4f1 100%);
+  padding:40px 20px;
+}
+.role-header{
+  text-align:center;
+  max-width:640px;
+  margin-bottom:45px;
+}
+.role-header .brand-mark{
+  width:56px;
+  height:56px;
+  font-size:36px;
+  margin:0 auto 16px;
+  border-radius:14px;
+}
+.role-header h1{
+  font-family:"DM Sans",sans-serif;
+  font-size:36px;
+  font-weight:700;
+  color:#102b3c;
+  margin:0 0 10px;
+  letter-spacing:-0.5px;
+}
+.role-header p{
+  color:#687d85;
+  font-size:16px;
+  margin:0;
+  line-height:1.5;
+}
+.role-cards-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:22px;
+  max-width:1160px;
+  width:100%;
+}
+@media(max-width:1024px){
+  .role-cards-grid{ grid-template-columns:repeat(2, 1fr); }
+}
+@media(max-width:600px){
+  .role-cards-grid{ grid-template-columns:1fr; }
+}
+.role-card{
+  background:#fff;
+  border:1px solid #e2ece9;
+  border-radius:18px;
+  padding:30px 24px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  text-align:left;
+  transition:all 0.22s ease;
+  cursor:pointer;
+  position:relative;
+  box-shadow:0 6px 20px rgba(18,58,70,0.04);
+}
+.role-card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 18px 40px rgba(18,58,70,0.12);
+}
+.role-icon-box{
+  width:54px;
+  height:54px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  font-size:26px;
+  margin-bottom:20px;
+  transition:transform 0.2s;
+}
+.role-card:hover .role-icon-box{
+  transform:scale(1.08);
+}
+.role-card h3{
+  font-size:20px;
+  font-weight:700;
+  margin:0 0 8px;
+  color:#102238;
+}
+.role-card p{
+  font-size:13px;
+  color:#73828d;
+  margin:0 0 20px;
+  line-height:1.5;
+  flex:1;
+}
+.role-card-badge{
+  font-size:11px;
+  font-weight:600;
+  padding:5px 12px;
+  border-radius:20px;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.role-card-action{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:0;
+  font-weight:700;
+  font-size:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:auto;
+  cursor:pointer;
+}
+
+/* Role Theme Variations */
+/* Doctor */
+.role-card.doctor .role-icon-box{ background:#edf7f4; color:#0d9983; }
+.role-card.doctor .role-card-badge{ background:#e6f4f1; color:#0d9983; }
+.role-card.doctor .role-card-action{ background:#0d9983; color:#fff; }
+.role-card.doctor:hover{ border-color:#0d9983; }
+
+/* Admin */
+.role-card.admin .role-icon-box{ background:#eef2ff; color:#4f46e5; }
+.role-card.admin .role-card-badge{ background:#e0e7ff; color:#4f46e5; }
+.role-card.admin .role-card-action{ background:#4f46e5; color:#fff; }
+.role-card.admin:hover{ border-color:#4f46e5; }
+
+/* Patient */
+.role-card.patient .role-icon-box{ background:#f0f9ff; color:#0284c7; }
+.role-card.patient .role-card-badge{ background:#e0f2fe; color:#0284c7; }
+.role-card.patient .role-card-action{ background:#0284c7; color:#fff; }
+.role-card.patient:hover{ border-color:#0284c7; }
+
+/* Lab Tech */
+.role-card.lab .role-icon-box{ background:#fffbe6; color:#d97706; }
+.role-card.lab .role-card-badge{ background:#fef3c7; color:#d97706; }
+.role-card.lab .role-card-action{ background:#d97706; color:#fff; }
+.role-card.lab:hover{ border-color:#d97706; }
+
+/* Top Role Switcher Bar on Auth Screen */
+.role-switcher-bar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin-bottom:24px;
+  background:#f2f7f6;
+  padding:4px;
+  border-radius:12px;
+  border:1px solid #dfe9e7;
+}
+.role-switch-btn{
+  border:0;
+  background:transparent;
+  padding:8px 14px;
+  border-radius:9px;
+  font-size:13px;
+  font-weight:600;
+  color:#60767c;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:all 0.18s;
+  cursor:pointer;
+}
+.role-switch-btn.active{
+  background:#fff;
+  color:#102238;
+  box-shadow:0 2px 8px rgba(18,58,70,0.08);
+}
+
+/* Theme accent overrides for Auth buttons when different role active */
+.auth-page.theme-admin .auth-submit{ background:#4f46e5; }
+.auth-page.theme-admin .auth-tab.active{ color:#4f46e5; }
+.auth-page.theme-patient .auth-submit{ background:#0284c7; }
+.auth-page.theme-patient .auth-tab.active{ color:#0284c7; }
+.auth-page.theme-lab .auth-submit{ background:#d97706; }
+.auth-page.theme-lab .auth-tab.active{ color:#d97706; }
+
+/* Switch portal button in topbar */
+.switch-portal-btn{
+  border:1px solid #dce9e6;
+  background:#fff;
+  border-radius:9px;
+  padding:6px 14px;
+  font-size:12px;
+  font-weight:600;
+  color:#536b70;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.switch-portal-btn:hover{
+  background:#edf7f4;
+  color:#0d9983;
+}
+
