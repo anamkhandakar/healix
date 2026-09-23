@@ -661,6 +661,7 @@ function App() {
         authData={authData}
         setAuthData={setAuthData}
         authError={authError}
+        setAuthError={setAuthError}
         handleAuth={handleAuth}
         onForgot={() => setModal("reset")}
         modal={modal}
@@ -968,6 +969,7 @@ function AuthScreen({
   authData,
   setAuthData,
   authError,
+  setAuthError,
   handleAuth,
   onForgot,
   modal,
@@ -981,6 +983,7 @@ function AuthScreen({
   const switchMode = (mode) => {
     setAuthError("");
     setAuthMode(mode);
+    setAuthData({ name: "", email: "", password: "", confirmPassword: "" });
     setShowPassword(false);
   };
 

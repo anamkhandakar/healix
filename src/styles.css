@@ -265,6 +265,11 @@ button{cursor:pointer}
   font-size:15px;
   font-weight:600;
   transition:.18s ease;
+  cursor:pointer;
+}
+.auth-tab:hover:not(.active){
+  background:rgba(255,255,255,.55);
+  color:#2e5a60;
 }
 .auth-tab.active{
   color:#078a76;
